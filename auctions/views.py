@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import render, get_object_or_404
@@ -99,7 +100,9 @@ def create(request):
 
 def listing(request, listing_id):
     listing = Listing.objects.get(pk=listing_id)
-    on_watchlist = listing in request.user.watchlist.all()
+    on_watchlist = request.user.is_authenticated and (
+        listing in request.user.watchlist.all()
+    )
     comments = listing.comments.order_by("-creation_time").all()
     return render(
         request,
@@ -112,11 +115,13 @@ def listing(request, listing_id):
     )
 
 
+@login_required
 def watchlist(request):
     listings = request.user.watchlist.order_by("-creation_time").all()
     return render(request, "auctions/index.html", {"listings": listings})
 
 
+@login_required
 def watchlist_delete(request):
     if request.method == "POST":
         listing = get_object_or_404(Listing, pk=int(request.POST["listing_id"]))
@@ -124,6 +129,7 @@ def watchlist_delete(request):
         return HttpResponseRedirect(reverse("listing", args=(listing.id,)))
 
 
+@login_required
 def watchlist_add(request):
     if request.method == "POST":
         listing = get_object_or_404(Listing, pk=int(request.POST["listing_id"]))
@@ -131,6 +137,7 @@ def watchlist_add(request):
         return HttpResponseRedirect(reverse("listing", args=(listing.id,)))
 
 
+@login_required
 def bid(request):
     if request.method == "POST":
         bid = decimal.Decimal(request.POST["bid"])
@@ -174,6 +181,7 @@ def close(request, listing_id):
     return HttpResponseRedirect(reverse("listing", args=(listing_id,)))
 
 
+@login_required
 def comment(request, listing_id):
     if request.method == "POST":
         text = request.POST["comment"]
